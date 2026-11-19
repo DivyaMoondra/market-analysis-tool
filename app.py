@@ -15,20 +15,23 @@ st.set_page_config(
 )
 
 STATE_ABBREVIATIONS = {
-    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
-    "California": "CA", "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE",
-    "Florida": "FL", "Georgia": "GA", "Hawaii": "HI", "Idaho": "ID",
-    "Illinois": "IL", "Indiana": "IN", "Iowa": "IA", "Kansas": "KS",
-    "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
-    "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN",
-    "Mississippi": "MS", "Missouri": "MO", "Montana": "MT", "Nebraska": "NE",
+    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ",
+    "Arkansas": "AR", "California": "CA", "Colorado": "CO",
+    "Connecticut": "CT", "Delaware": "DE", "Florida": "FL",
+    "Georgia": "GA", "Hawaii": "HI", "Idaho": "ID",
+    "Illinois": "IL", "Indiana": "IN", "Iowa": "IA",
+    "Kansas": "KS", "Kentucky": "KY", "Louisiana": "LA",
+    "Maine": "ME", "Maryland": "MD", "Massachusetts": "MA",
+    "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS",
+    "Missouri": "MO", "Montana": "MT", "Nebraska": "NE",
     "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ",
     "New Mexico": "NM", "New York": "NY", "North Carolina": "NC",
-    "North Dakota": "ND", "Ohio": "OH", "Oklahoma": "OK", "Oregon": "OR",
-    "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
-    "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT",
+    "North Dakota": "ND", "Ohio": "OH", "Oklahoma": "OK",
+    "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI",
+    "South Carolina": "SC", "South Dakota": "SD",
+    "Tennessee": "TN", "Texas": "TX", "Utah": "UT",
     "Vermont": "VT", "Virginia": "VA", "Washington": "WA",
-    "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY",
+    "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY"
 }
 
 
@@ -37,7 +40,7 @@ STATE_ABBREVIATIONS = {
 # -----------------------------
 
 @st.cache_data(ttl=60 * 60 * 24 * 30)
-def geocode_address(query: str):
+def geocode_address(query):
 
     geolocator = Nominatim(
         user_agent="market_analysis_tool_prototype/1.0"
@@ -65,13 +68,12 @@ def make_circle_boundary(lat, lon, radius_miles, points=72):
 
     earth_radius_m = 6_371_008.8
     distance_m = radius_miles * 1609.344
-
     angular_distance = distance_m / earth_radius_m
 
     lat1 = math.radians(lat)
     lon1 = math.radians(lon)
 
-    coords = []
+    coordinates = []
 
     for i in range(points):
 
@@ -90,18 +92,18 @@ def make_circle_boundary(lat, lon, radius_miles, points=72):
             - math.sin(lat1) * math.sin(lat2)
         )
 
-        coords.append([
+        coordinates.append([
             math.degrees(lon2),
             math.degrees(lat2)
         ])
 
-    coords.append(coords[0])
+    coordinates.append(coordinates[0])
 
-    return coords
+    return coordinates
 
 
 # -----------------------------
-# APP TITLE
+# TITLE
 # -----------------------------
 
 st.title("Market Analysis Tool")
@@ -115,11 +117,14 @@ st.caption(
 # TWO-COLUMN LAYOUT
 # -----------------------------
 
-left_col, right_col = st.columns([1, 1], gap="large")
+left_col, right_col = st.columns(
+    [1, 1],
+    gap="large"
+)
 
 
 # =============================
-# LEFT: INPUTS
+# LEFT COLUMN - INPUTS
 # =============================
 
 with left_col:
@@ -140,9 +145,12 @@ with left_col:
 
         state = st.selectbox(
             "State :red[*]",
-            list(STATE_ABBREVIATIONS.keys()),
+            options=list(STATE_ABBREVIATIONS.keys()),
             index=None,
-            placeholder="Select state"
+            placeholder="Select state",
+            format_func=lambda s: (
+                f"{s} ({STATE_ABBREVIATIONS[s]})"
+            )
         )
 
         zip_code = st.text_input(
@@ -165,7 +173,7 @@ with left_col:
 
 
     # -----------------------------
-    # SUBMIT / VALIDATE INPUTS
+    # VALIDATE & PROCESS INPUTS
     # -----------------------------
 
     if submit:
@@ -177,14 +185,18 @@ with left_col:
             zip_code.strip()
         ]):
 
-            st.error("Please complete all required location fields.")
+            st.error(
+                "Please complete all required location fields."
+            )
 
         elif not (
             zip_code.isdigit()
             and len(zip_code) == 5
         ):
 
-            st.error("Please enter a valid 5-digit ZIP code.")
+            st.error(
+                "Please enter a valid 5-digit ZIP code."
+            )
 
         else:
 
@@ -201,7 +213,10 @@ with left_col:
 
                 if result is None:
 
-                    st.session_state.pop("market_result", None)
+                    st.session_state.pop(
+                        "market_result",
+                        None
+                    )
 
                     st.error(
                         "We couldn't find this location. "
@@ -227,7 +242,8 @@ with left_col:
                             "address": address.strip(),
                             "city": city.strip(),
                             "state": state,
-                            "state_abbreviation": STATE_ABBREVIATIONS[state],
+                            "state_abbreviation":
+                                STATE_ABBREVIATIONS[state],
                             "zip_code": zip_code,
                             "radius_miles": radius_miles
                         },
@@ -236,33 +252,43 @@ with left_col:
 
                         "market_geometry": {
                             "type": "Polygon",
-                            "coordinates": [boundary_coordinates],
-                            "coordinate_order": "longitude, latitude (GeoJSON)"
+                            "coordinates": [
+                                boundary_coordinates
+                            ],
+                            "coordinate_order":
+                                "longitude, latitude (GeoJSON)"
                         },
 
                         "area_sq_miles": area_sq_miles,
 
-                        "geocoding_source": "OpenStreetMap Nominatim"
+                        "geocoding_source":
+                            "OpenStreetMap Nominatim"
                     }
 
-                    st.success("Market mapped successfully.")
+                    st.success(
+                        "Market mapped successfully."
+                    )
 
-            except (GeocoderUnavailable, GeocoderTimedOut):
+            except (
+                GeocoderUnavailable,
+                GeocoderTimedOut
+            ):
 
                 st.error(
-                    "The geocoding service is temporarily unavailable. "
-                    "Please try again shortly."
+                    "The geocoding service is temporarily "
+                    "unavailable. Please try again shortly."
                 )
 
             except Exception as exc:
 
                 st.error(
-                    f"An error occurred while mapping the market: {exc}"
+                    f"An error occurred while mapping "
+                    f"the market: {exc}"
                 )
 
 
 # =============================
-# RIGHT: OUTPUT
+# RIGHT COLUMN - OUTPUT
 # =============================
 
 with right_col:
@@ -271,11 +297,11 @@ with right_col:
 
     market = st.session_state.get("market_result")
 
-    if not market:
+    if market is None:
 
         st.info(
-            "Enter the market details on the left and click "
-            "**Map Market** to see the output here."
+            "Enter the market details on the left and "
+            "click Map Market to see the output here."
         )
 
     else:
@@ -293,7 +319,8 @@ with right_col:
         # -----------------------------
 
         st.markdown(
-            f"**Matched location:** {geo['matched_address']}"
+            f"**Matched location:** "
+            f"{geo['matched_address']}"
         )
 
 
@@ -312,7 +339,10 @@ with right_col:
             [lat, lon],
             tooltip="Selected property",
             popup=geo["matched_address"],
-            icon=folium.Icon(color="red", icon="home")
+            icon=folium.Icon(
+                color="red",
+                icon="home"
+            )
         ).add_to(map_obj)
 
         folium.Circle(
@@ -341,9 +371,11 @@ with right_col:
         ).add_to(map_obj)
 
 
-        # Fit map to market boundary
+        # Fit map to the market boundary
 
-        coordinates = market["market_geometry"]["coordinates"][0]
+        coordinates = (
+            market["market_geometry"]["coordinates"][0]
+        )
 
         bounds = [
             [
@@ -367,91 +399,28 @@ with right_col:
 
 
         # -----------------------------
-        # OUTPUT METRICS
+        # METRICS - SINGLE ROW
         # -----------------------------
 
-        metric_html = f"""
-        <div style="
-            display:flex;
-            flex-wrap:nowrap;
-            gap:16px;
-            width:100%;
-            overflow-x:auto;
-            padding:8px 0 12px 0;
-            font-family:inherit;
-        ">
+        metric_cols = st.columns(4, gap="small")
 
-            <div style="flex:1; min-width:max-content;">
-                <div style="
-                    font-size:14px;
-                    margin-bottom:5px;
-                ">
-                    Latitude
-                </div>
-                <div style="
-                    font-size:16px;
-                    font-weight:400;
-                    white-space:nowrap;
-                ">
-                    {lat:.6f}
-                </div>
-            </div>
+        with metric_cols[0]:
+            st.caption("Latitude")
+            st.write(f"{lat:.6f}")
 
-            <div style="flex:1; min-width:max-content;">
-                <div style="
-                    font-size:14px;
-                    margin-bottom:5px;
-                ">
-                    Longitude
-                </div>
-                <div style="
-                    font-size:16px;
-                    font-weight:400;
-                    white-space:nowrap;
-                ">
-                    {lon:.6f}
-                </div>
-            </div>
+        with metric_cols[1]:
+            st.caption("Longitude")
+            st.write(f"{lon:.6f}")
 
-            <div style="flex:1; min-width:max-content;">
-                <div style="
-                    font-size:14px;
-                    margin-bottom:5px;
-                ">
-                    Market Radius
-                </div>
-                <div style="
-                    font-size:16px;
-                    font-weight:400;
-                    white-space:nowrap;
-                ">
-                    {radius} mi
-                </div>
-            </div>
+        with metric_cols[2]:
+            st.caption("Market Radius")
+            st.write(f"{radius} mi")
 
-            <div style="flex:1; min-width:max-content;">
-                <div style="
-                    font-size:14px;
-                    margin-bottom:5px;
-                ">
-                    Approximate Market Area
-                </div>
-                <div style="
-                    font-size:16px;
-                    font-weight:400;
-                    white-space:nowrap;
-                ">
-                    {market["area_sq_miles"]:.2f} sq. mi.
-                </div>
-            </div>
-
-        </div>
-        """
-
-        st.markdown(
-            metric_html,
-            unsafe_allow_html=True
-        )
+        with metric_cols[3]:
+            st.caption("Approx. Market Area")
+            st.write(
+                f"{market['area_sq_miles']:.2f} sq. mi."
+            )
 
 
         # -----------------------------
@@ -459,13 +428,14 @@ with right_col:
         # -----------------------------
 
         geojson = {
-
             "type": "Feature",
 
             "properties": {
                 "address": inp["address"],
                 "city": inp["city"],
                 "state": inp["state"],
+                "state_abbreviation":
+                    inp["state_abbreviation"],
                 "zip_code": inp["zip_code"],
                 "radius_miles": radius
             },
