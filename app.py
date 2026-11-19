@@ -1,35 +1,3 @@
-import json
-import math
-import time
-
-import folium
-import streamlit as st
-from geopy.geocoders import Nominatim
-from geopy.exc import GeocoderUnavailable, GeocoderTimedOut
-from streamlit_folium import st_folium
-
-st.set_page_config(page_title="Market Analysis Tool", page_icon="📍", layout="wide")
-
-STATE_ABBREVIATIONS = {
-    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR", "California": "CA",
-    "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE", "Florida": "FL", "Georgia": "GA",
-    "Hawaii": "HI", "Idaho": "ID", "Illinois": "IL", "Indiana": "IN", "Iowa": "IA",
-    "Kansas": "KS", "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
-    "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS", "Missouri": "MO",
-    "Montana": "MT", "Nebraska": "NE", "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ",
-    "New Mexico": "NM", "New York": "NY", "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH",
-    "Oklahoma": "OK", "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
-    "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT", "Vermont": "VT",
-    "Virginia": "VA", "Washington": "WA", "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY",
-}
-
-@st.cache_data(ttl=60 * 60 * 24 * 30)
-def geocode_address(query: str):
-    geolocator = Nominatim(user_agent="market_analysis_tool_prototype/1.0")
-    time.sleep(1)  # Respect public Nominatim request rate limits on cache misses.
-    location = geolocator.geocode(query, timeout=15)
-    if location is None:
-        return None
     return {"matched_address": location.address, "latitude": location.latitude, "longitude": location.longitude}
 
 
@@ -64,10 +32,10 @@ left_col, right_col = st.columns([1, 1], gap="large")
 with left_col:
     st.subheader("Market Inputs")
     with st.form("market_inputs_form"):
-        address = st.text_input("Address", placeholder="Street address")
-        city = st.text_input("City", placeholder="City")
-        state = st.selectbox("State", list(STATE_ABBREVIATIONS.keys()), index=None, placeholder="Select state")
-        zip_code = st.text_input("ZIP Code", max_chars=5, placeholder="5-digit ZIP code")
+        address = st.text_input("Address :red[*]", placeholder="Street address")
+        city = st.text_input("City :red[*]", placeholder="City")
+        state = st.selectbox("State :red[*]", list(STATE_ABBREVIATIONS.keys()), index=None, placeholder="Select state")
+        zip_code = st.text_input("ZIP Code :red[*]", max_chars=5, placeholder="5-digit ZIP code")
         radius_miles = st.selectbox("Market Radius (miles)", [1, 3, 5], index=1)
         submit = st.form_submit_button("Map Market", type="primary", use_container_width=True)
 
@@ -138,11 +106,11 @@ with right_col:
         map_obj.fit_bounds(bounds)
         st_folium(map_obj, height=430, use_container_width=True, key="market_map")
 
-        metric1, metric2, metric3 = st.columns(3)
+        metric1, metric2, metric3, metric4 = st.columns(4)
         metric1.metric("Latitude", f"{lat:.6f}")
         metric2.metric("Longitude", f"{lon:.6f}")
         metric3.metric("Market Radius", f"{radius} mi")
-        st.metric("Approximate Market Area", f"{market['area_sq_miles']:.2f} sq. mi.")
+        metric4.metric("Approximate Market Area", f"{market['area_sq_miles']:.2f} sq. mi.")
 
         geojson = {
             "type": "Feature", "properties": {
